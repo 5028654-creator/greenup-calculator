@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Green-Up Betting Calculator (Auto)</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 650px; margin: 40px auto; }
+    h1 { text-align: center; }
+    label { display: block; margin-top: 12px; }
+    input[type=number] { width: 100%; padding: 8px; margin-top: 4px; }
+    input[type=range] { width: 100%; margin-top: 10px; }
+    .results { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+    .slider-label { display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <h1>Green-Up Betting Calculator</h1>
+
+  <label>Bankroll ($):
+    <input type="number" id="bankroll" value="1000">
+  </label>
+
+  <label>Back Odds (Bookie):
+    <input type="number" step="0.01" id="backOdds" value="2.2">
+  </label>
+
+  <label>Lay Odds (Betfair):
+    <input type="number" step="0.01" id="layOdds" value="2.1">
+  </label>
+
+  <label>Bankroll Usage:</label>
+  <div class="slider-label">
+    <span>0%</span>
+    <span>100%</span>
+  </div>
+  <input type="range" id="bankrollPercent" min="0" max="100" value="100">
+  <div style="text-align:center;">Using: <span id="percentLabel">100</span>% of bankroll</div>
+
+  <div class="results" id="results"></div>
+
+  <script>
+    const bankrollInput = document.getElementById('bankroll');
+    const backOddsInput = document.getElementById('backOdds');
+    const layOddsInput = document.getElementById('layOdds');
+    const slider = document.getElementById('bankrollPercent');
+    const percentLabel = document.getElementById('percentLabel');
+
+    function updatePercentLabel() {
+      percentLabel.innerText = slider.value;
+    }
+
+    function calculate() {
+      let bankroll = parseFloat(bankrollInput.value);
+      let backOdds = parseFloat(backOddsInput.value);
+      let layOdds = parseFloat(layOddsInput.value);
+      let commission = 0.05;
+
+      let percent = parseFloat(slider.value);
+      let effectiveBankroll = bankroll * (percent / 100);
+
+      // Solve for stakes: backStake + layLiability = effectiveBankroll
+      let L = layOdds - 1;
+      let backStake = effectiveBankroll * (1 - (layOdds - commission) / (backOdds * (1 - commission) + (layOdds - commission)));
+      let layStake = (effectiveBankroll - backStake) / L;
+
+      let layLiability = (layOdds - 1) * layStake;
+      let backProfit = (backOdds - 1) * backStake;
+
+      let profitWin = backProfit - layLiability;
+      let profitLose = layStake * (1 - commission) - backStake;
+      let greenProfit = ((profitWin + profitLose) / 2).toFixed(2);
+
+      document.getElementById('results').innerHTML = `
+        <strong>Results:</strong><br>
+        Back Stake: $${backStake.toFixed(2)}<br>
+        Lay Stake: $${layStake.toFixed(2)}<br>
+        Lay Liability: $${layLiability.toFixed(2)}<br>
+        Profit if Win: $${profitWin.toFixed(2)}<br>
+        Profit if Lose: $${profitLose.toFixed(2)}<br>
+        <b>Greened Profit: $${greenProfit}</b><br>
+        (Bankroll used: $${(backStake + layLiability).toFixed(2)} of $${bankroll})
+      `;
+    }
+
+    [bankrollInput, backOddsInput, layOddsInput, slider].forEach(el => {
+      el.addEventListener('input', () => {
+        updatePercentLabel();
+        calculate();
+      });
+    });
+
+    updatePercentLabel();
+    calculate();
+  </script>
+</body>
+</html>
